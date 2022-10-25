@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 from sklearn import decomposition
+from sklearn.model_selection import train_test_split
 
 
 def load_datasets(dataset_name='bank'):
@@ -23,11 +24,25 @@ def load_datasets(dataset_name='bank'):
 
     curr_data = pd.read_csv('datasets/{0}'.format(dataset), sep=delim)
 
-    # Convert string targets into actual unique ints and same target col name 
+    # Convert string targets into actual unique ints and same target col name
     curr_data[label_col] = curr_data[label_col].apply(lambda x: label_map[x])
     curr_data = curr_data.rename({label_col: 'y'}, axis='columns')
 
     return curr_data
+
+def read_and_split_data(dataset_name='bank'):
+    curr_data = load_datasets(dataset_name=dataset_name)
+    if dataset_name == 'bank':
+        print("Removing categorical features for time being...")
+        curr_data = curr_data.select_dtypes(exclude=["object"])
+        
+    x_data = np.array(curr_data.loc[:, curr_data.columns != 'y'])
+    y_data = np.array(curr_data['y']).flatten()
+
+    # [train, val, test] = [0.6, 0.2, 0.2]; can change later
+    x_train, x_test, y_train, y_test = train_test_split(x_data, y_data, test_size=0.2, random_state=573, shuffle=False)
+    x_train, x_val, y_train, y_val = train_test_split(x_train, y_train, test_size=0.25, random_state=573, shuffle=False)
+    return x_train, y_train, x_val, y_val, x_test, y_test
 
 def target_dist(dataset):
 
@@ -45,7 +60,7 @@ def measure_complexity(dataset):
     explained_var_cummulative = np.cumsum(explained_var)
 
     print(sum(explained_var_cummulative < 0.95)/len(explained_var_cummulative))
-    # Count components needed to explain 95% of variance 
+    # Count components needed to explain 95% of variance
     #print(explained_var_cummulative)
 
 if __name__ == '__main__':
