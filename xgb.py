@@ -44,11 +44,10 @@ def validate_xgb_classifier(x_train, y_train, x_test, y_test, prob_type, params,
     write_row(base_dir+"/"+filename, np.array(hp + exp_results))
     print("Done with experiment " + str(exp_num))
 
-    print("Parameters used were")
+    print("\nParameters used were")
     print(f"Max depth: {max_depth}, Learning Rate: {learning_rate}, Gamma: {gamma}, Num Estimators: {n_estimators}\n")
     print(f'Results were:')
-    print(f'Accuracy: {accuracy}, Precision: {report["1"]["precision"]}, Recall: {report["1"]["recall"]}
-            , F1-score: {report["1"]["f1-score"]}, Micro-avg-f1: {micro_avg_f1}')
+    print(f'Accuracy: {accuracy}, Precision: {report["1"]["precision"]}, Recall: {report["1"]["recall"]}, F1-score: {report["1"]["f1-score"]}, Micro-avg-f1: {micro_avg_f1}\n')
     
     print_best_results(base_dir+"/"+filename, "XGBoost", prob_type)
 
@@ -73,8 +72,8 @@ def validate_xgb_regressor(x_train, y_train, x_test, y_test, prob_type, params, 
     print("Done with experiment " + str(exp_num))
     exp_num += 1
 
-    print("Parameters used were")
+    print("\nParameters used were")
     print(f"Max depth: {max_depth}, Learning Rate: {learning_rate}, Gamma: {gamma}, Num Estimators: {n_estimators}\n")
     print("Results Were")
-    print(f"MSE: {mse}, MAE: {mae}")
+    print(f"MSE: {mse}, MAE: {mae}\n")
     print_best_results(base_dir+"/"+filename, "XGBoost", prob_type)

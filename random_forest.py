@@ -39,11 +39,10 @@ def validate_rf_classifier(x_train, y_train, x_test, y_test, prob_type, params, 
     hp = ["rf", exp_num, max_depth, class_weight, criterion, n_estimators]
     write_row(base_dir+"/"+filename, np.array(hp + exp_results))
     print("Done with experiment")
-    print("Parameters used were")
+    print("\nParameters used were")
     print(f"Max depth: {max_depth}, Class Weights: {str(class_weight)}, Criterion: {criterion}, Num Estimators: {n_estimators}\n")
     print(f'Results were:')
-    print(f'Accuracy: {accuracy}, Precision: {report["1"]["precision"]}, Recall: {report["1"]["recall"]}
-            , F1-score: {report["1"]["f1-score"]}, Micro-avg-f1: {micro_avg_f1}')
+    print(f'Accuracy: {accuracy}, Precision: {report["1"]["precision"]}, Recall: {report["1"]["recall"]}, F1-score: {report["1"]["f1-score"]}, Micro-avg-f1: {micro_avg_f1}\n')
 
     print_best_results(base_dir+"/"+filename, "RF", prob_type)
 
@@ -65,8 +64,8 @@ def validate_rf_regressor(x_train, y_train, x_test, y_test, prob_type, params, b
     write_row(base_dir+"/"+filename, np.array(hp + exp_results))
     print("Done with experiment")
 
-    print("Parameters used were")
+    print("\nParameters used were")
     print(f"Max depth: {max_depth}, Criterion: {criteron}, Num Estimators: {n_estimators}\n")
     print("Results Were")
-    print(f"MSE: {mse}, MAE: {mae}")
+    print(f"MSE: {mse}, MAE: {mae}\n")
     print_best_results(base_dir+"/"+filename, "RF", prob_type)

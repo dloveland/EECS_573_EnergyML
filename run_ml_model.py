@@ -50,31 +50,33 @@ def get_test_results(dataset_name, model, exp_num, base_dir="results"):
 
 def main():
     parser = argparse.ArgumentParser();
-    parse.add_argument("--model", type=str, default="rf", help = "Train one of Random Forests or XGB based predictors");
-    parse.add_argument("--dataset", type=str, default="bank", help = "Train model on either bank, maternal or winequality datasets");
+    parser.add_argument("--model", type=str, default="rf", help = "Train one of Random Forests or XGB based predictors");
+    parser.add_argument("--dataset", type=str, default="bank", help = "Train model on either bank, maternal or winequality datasets");
 
     # General params
-    parse.add_argument("--maxdepth", type=int, default=3, help = "Set Max Depth of Decision Trees");
-    parse.add_argument("--nestim", type=int, default=50, help = "Set number of estimators for Decision Trees");
+    parser.add_argument("--maxdepth", type=int, default=3, help = "Set Max Depth of Decision Trees");
+    parser.add_argument("--nestim", type=int, default=50, help = "Set number of estimators for Decision Trees");
 
     # XGB specific
-    parse.add_argument("--lr", type=float, default=0.1, help = "Set learning rate to train XGB Decision Trees");
-    parse.add_argument("--gamma", type=int, default=0, help = "Set number Gamma to train XGB Decision Trees");
+    parser.add_argument("--lr", type=float, default=0.1, help = "Set learning rate to train XGB Decision Trees");
+    parser.add_argument("--gamma", type=int, default=0, help = "Set number Gamma to train XGB Decision Trees");
 
     # RF specific
-    parse.add_argument("--criterion", type=str, default="gini", help = "Criterion function to train RF Decision Trees");
-    parse.add_argument("--weights", type=str, default=None, help = "Criterion function to train RF Decision Trees");
+    parser.add_argument("--criterion", type=str, default="gini", help = "Criterion function to train RF Decision Trees");
+    parser.add_argument("--weights", type=str, default=None, help = "Criterion function to train RF Decision Trees");
 
-    args = parse.parse_args();
+    args = parser.parse_args();
     start = datetime.now()
     params = {"max_depth":args.maxdepth, "n_estimators":args.nestim, "learning_rate":args.lr, "gamma":args.gamma,
             "criterion":args.criterion, "class_weight":args.weights}
     #for dataset_name in ['bank', 'maternal', 'winequality']:
     #    for model in ["rf", "xgb"]:
 
-    print(f"Running Experiment using {args.model} on dataset {args.dataset}.")
+    model_name = "Random Forests" if args.model == "rf" else "XGBoost"
+    print(f"Running Experiment using {model_name} on dataset {args.dataset}.")
     print("Printing params dict for sanity check.")
     print(params)
+    print()
     run_validation_exp(args.dataset, args.model, params=params)
     end = datetime.now()
     print("Total time: ", end - start)
