@@ -66,7 +66,7 @@ def validate_rf_regressor(x_train, y_train, x_test, y_test, prob_type, params, b
     print("Done with experiment")
 
     print("Parameters used were")
-    print(f"Max depth: {max_depth}, Criterion: {learning_rate}, Num Estimators: {n_estimators}\n")
+    print(f"Max depth: {max_depth}, Criterion: {criteron}, Num Estimators: {n_estimators}\n")
     print("Results Were")
     print(f"MSE: {mse}, MAE: {mae}")
     print_best_results(base_dir+"/"+filename, "RF", prob_type)

@@ -67,8 +67,8 @@ def main():
 
     args = parse.parse_args();
     start = datetime.now()
-    params = {"max_depth":args.maxdepth, "n_estimators":args.nestim, "lr":args.lr, "gamma":args.gamma,
-            "criterion":args.criterion, "weights":args.weights}
+    params = {"max_depth":args.maxdepth, "n_estimators":args.nestim, "learning_rate":args.lr, "gamma":args.gamma,
+            "criterion":args.criterion, "class_weight":args.weights}
     #for dataset_name in ['bank', 'maternal', 'winequality']:
     #    for model in ["rf", "xgb"]:
 
