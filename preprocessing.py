@@ -35,7 +35,6 @@ def load_datasets(dataset_name='bank'):
 def read_and_split_data(dataset_name='bank'):
     curr_data = load_datasets(dataset_name=dataset_name)
     if dataset_name == 'bank':
-        print("One hot encoding categorical features...")
         cat_cols = curr_data.select_dtypes(["object"]).columns
         # Can use this if sklearn causes need to change other code, but usually worse for inference
         # curr_data = pd.get_dummies(curr_data, columns=cat_cols)

@@ -2,6 +2,7 @@
 FIXME
 """
 
+import argparse
 import pandas as pd
 from datetime import datetime
 from file_utils import *
@@ -49,9 +50,23 @@ def get_test_results(dataset_name, model, exp_num, base_dir="results"):
 
 def main():
     start = datetime.now()
-    for dataset_name in ['bank', 'maternal', 'winequality']:
-        for model in ["rf", "xgb"]:
-            run_validation_exp(dataset_name, model)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--model", type=str, default="all", help = "Train one of Random Forests or XGB based predictors")
+    parser.add_argument("--dataset", type=str, default="all", help = "Train model on either bank, maternal or winequality datasets")
+    args = parser.parse_args()
+
+    if args.model=='all' or args.dataset=='all':
+        for dataset_name in ['bank', 'maternal', 'winequality']:
+            for model in ["rf", "xgb"]:
+                print(f"Running experiment for {model} on {dataset_name}")
+                run_validation_exp(dataset_name, model)
+                print('─' * 40)
+    else:
+        model = args.model
+        dataset_name = args.dataset
+        print(f"Running experiment for {model} on {dataset_name}")
+        run_validation_exp(dataset_name, model)
+
     end = datetime.now()
     print("Total time: ", end - start)
 
