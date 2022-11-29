@@ -14,10 +14,6 @@ from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.model_selection import GridSearchCV
 from skopt import BayesSearchCV
 
-# Make this a flag and pass as input later
-OPT_STYLE = "Bayes"
-
-
 def validate_rf(x_train, y_train, x_test, y_test, prob_type, tuner, notune, base_dir, filename="rf_results.csv"):
     if prob_type == "regression":
         validate_rf_regressor(x_train, y_train, x_test, y_test, prob_type, tuner, notune, base_dir)
@@ -26,33 +22,6 @@ def validate_rf(x_train, y_train, x_test, y_test, prob_type, tuner, notune, base
 
 def validate_rf_classifier(x_train, y_train, x_test, y_test, prob_type, tuner, notune, base_dir, filename="rf_results.csv"):
     exp_num = 0
-    '''
-    Code for manual grid search
-    for max_depth in [3, 4]:
-        for class_weight in ["balanced", None]:
-            for criterion in ["gini", "entropy", "log_loss"]:
-                for n_estimators in range(50, 400, 50):
-                    rf_clf = RandomForestClassifier(max_depth=max_depth, class_weight=class_weight,
-                                                    criterion=criterion, n_estimators=n_estimators)
-                    rf_clf.fit(x_train, y_train)
-
-                    dump(rf_clf, base_dir+"/rf_clf/rf_exp_num" + str(exp_num) + ".joblib")
-                    preds = rf_clf.predict(x_test)
-                    report = classification_report(y_test, preds, output_dict=True)
-                    confusion_mat = confusion_matrix(y_test, preds)
-                    np.savez(base_dir + "/rf_results/rf_exp_num" + str(exp_num) + ".npz", confusion_mat)
-                    micro_avg_f1 = sklearn.metrics.f1_score(y_test, preds, average="micro")
-                    accuracy = sklearn.metrics.accuracy_score(y_test, preds)
-                    exp_results = [accuracy, report["1"]["precision"], report["1"]["recall"], report["1"]["f1-score"], micro_avg_f1]
-                    hp = ["rf", exp_num, max_depth, class_weight, criterion, n_estimators]
-                    write_row(base_dir+"/"+filename, np.array(hp + exp_results))
-                    print("Done with experiment " + str(exp_num))
-                    exp_num += 1
-                    break # FIXME
-                break # FIXME
-            break # FIXME
-    print_best_results(base_dir+"/"+filename, "RF", prob_type)
-    '''
     if notune:
         print("Performing training using appropriate params from hyperparam.txt")
         params = {"criterion":P_CRITERION, 'max_depth':P_MAX_D, 'n_estimators':P_N_ESTIM, 'class_weight':P_C_WEIGHT}
@@ -77,10 +46,10 @@ def validate_rf_classifier(x_train, y_train, x_test, y_test, prob_type, tuner, n
             print(f"{k}:{v}")
     else:
         params = {
-            'criterion':["gini", "entropy", "log_loss"],
-            'max_depth':[3, 4],
+            #'criterion':["gini", "entropy", "log_loss"],
+            'max_depth':[3, 4, 5],
             'n_estimators':[50, 200, 400],
-            'class_weight':['balanced',None],
+            'max_features':['sqrt','log2',None,0.5],
         }
 
         # Maybe change this to weighted or samples based f1
@@ -91,17 +60,17 @@ def validate_rf_classifier(x_train, y_train, x_test, y_test, prob_type, tuner, n
         if tuner == 'bayes':
             print("Performing Bayesian Search")
             hp_tuner = BayesSearchCV(
-                RandomForestClassifier(random_state=573,n_jobs=-1),
+                RandomForestClassifier(criterion='gini',class_weight='balanced',random_state=573,n_jobs=-1),
                 search_spaces=params,
                 cv=5,
-                #scoring=scoring_options,
                 scoring=refit_target,
                 refit=refit_target,
+                random_state=573,
                 )
         else:
             print("Performing Grid Search")
             hp_tuner = GridSearchCV(
-                RandomForestClassifier(random_state=573,n_jobs=-1),
+                RandomForestClassifier(criterion='gini',class_weight='balanced',random_state=573,n_jobs=-1),
                 param_grid=params,
                 cv=5,
                 scoring=scoring_options,
@@ -129,31 +98,7 @@ def validate_rf_classifier(x_train, y_train, x_test, y_test, prob_type, tuner, n
 
         pd.DataFrame(hp_results.cv_results_).to_csv(base_dir+"/"+filename)
 
-
-
 def validate_rf_regressor(x_train, y_train, x_test, y_test, prob_type, tuner, notune, base_dir, filename="rf_results.csv"):
-    '''
-    Manual Grid Search, added a GridSearchCV based implementation for consistency with Bayes, can change back later;
-
-    exp_num = 0
-    for max_depth in [3, 4]:
-        for criterion in ["squared_error", "absolute_error", "poisson"]:
-            for n_estimators in range(50, 400, 50):
-                rf_reg = RandomForestRegressor(max_depth=max_depth, criterion=criterion, n_estimators=n_estimators)
-                rf_reg.fit(x_train, y_train)
-                dump(rf_reg, base_dir+"/rf_reg/rf_exp_num" + str(exp_num) + ".joblib")
-                preds = rf_reg.predict(x_test)
-                mse = sklearn.metrics.mean_squared_error(y_test, preds)
-                mae = sklearn.metrics.mean_absolute_error(y_test, preds)
-                exp_results = [mse, mae]
-                hp = ["xgb", exp_num, max_depth, criterion, n_estimators]
-                write_row(base_dir+"/"+filename, np.array(hp + exp_results))
-                print("Done with experiment " + str(exp_num))
-                exp_num += 1
-                break # FIXME
-            break # FIXME
-    print_best_results(base_dir+"/"+filename, "RF", prob_type)
-    '''
     if notune:
         print("Performing training using appropriate params from hyperparam.txt")
         params = {"criterion":P_CRITERION, 'max_depth':P_MAX_D, 'n_estimators':P_N_ESTIM}
@@ -171,26 +116,27 @@ def validate_rf_regressor(x_train, y_train, x_test, y_test, prob_type, tuner, no
             print(f"{k}:{v}")
     else:
         params = {
-            'criterion':["squared_error", "absolute_error", "poisson"],
-            'max_depth':[3, 4],
+            #'criterion':["squared_error", "absolute_error", "poisson"],
+            'max_depth':[3, 4, 5],
             'n_estimators':[50, 200, 400],
+            'max_features':['sqrt','log2',None],
         }
         refit_target = 'neg_mean_squared_error'
         hp_tuner = None
         if tuner == 'bayes':
             print("Performing Bayesian Search")
             hp_tuner = BayesSearchCV(
-                RandomForestRegressor(random_state=573,n_jobs=-1),
+                RandomForestRegressor(criterion="squared_error",random_state=573,n_jobs=-1),
                 search_spaces=params,
                 cv=5,
-                #scoring=scoring_options,
                 scoring=refit_target,
                 refit=refit_target,
+                random_state=573,
                 )
         else:
             print("Performing Grid Search")
             hp_tuner = GridSearchCV(
-                RandomForestClassifier(random_state=573,n_jobs=-1),
+                RandomForestClassifier(criterion="squared_error",random_state=573,n_jobs=-1),
                 param_grid=params,
                 cv=5,
                 scoring=scoring_options,
