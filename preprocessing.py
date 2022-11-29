@@ -2,6 +2,8 @@ import pandas as pd
 import numpy as np
 from sklearn import decomposition
 from sklearn.model_selection import train_test_split
+from sklearn.compose import ColumnTransformer
+from sklearn.preprocessing import OneHotEncoder
 
 
 def load_datasets(dataset_name='bank'):
@@ -33,8 +35,22 @@ def load_datasets(dataset_name='bank'):
 def read_and_split_data(dataset_name='bank'):
     curr_data = load_datasets(dataset_name=dataset_name)
     if dataset_name == 'bank':
-        print("Removing categorical features for time being...")
-        curr_data = curr_data.select_dtypes(exclude=["object"])
+        print("One hot encoding categorical features...")
+        cat_cols = curr_data.select_dtypes(["object"]).columns
+        # Can use this if sklearn causes need to change other code, but usually worse for inference
+        # curr_data = pd.get_dummies(curr_data, columns=cat_cols)
+
+        transform = ColumnTransformer(
+                transformers=[('onehotenc',OneHotEncoder(),cat_cols)],
+                remainder='passthrough',
+                verbose_feature_names_out = False)
+
+        curr_data = pd.DataFrame(
+                transform.fit_transform(curr_data),
+                columns = transform.get_feature_names_out())
+
+        # Just so the reporting does not have to change :)
+        curr_data['y'] = curr_data['y'].astype(int)
         
     x_data = np.array(curr_data.loc[:, curr_data.columns != 'y'])
     y_data = np.array(curr_data['y']).flatten()
