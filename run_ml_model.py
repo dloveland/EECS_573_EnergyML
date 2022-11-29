@@ -13,16 +13,16 @@ from xgb import *
 
 DS_NAME_TO_PROB_TYPE = {'bank': 'binary_classification', 'maternal':'multiclass_classification', 'winequality':'regression'}
 
-def run_validation_exp(dataset_name, model, base_dir="results"):
+def run_validation_exp(dataset_name, model, tuner="grid", notune=False, base_dir="results"):
     x_tr, y_tr, x_vl, y_vl, x_ts, y_ts = read_and_split_data(dataset_name)
     prep_results_files(base_dir)
     prob_type = DS_NAME_TO_PROB_TYPE[dataset_name]
     base_dir = base_dir + "/" + prob_type
 
     if model == "rf":
-        validate_rf(x_tr, y_tr, x_vl, y_vl, prob_type, base_dir=base_dir)
+        validate_rf(x_tr, y_tr, x_vl, y_vl, prob_type, tuner, notune, base_dir=base_dir)
     if model == "xgb":
-        validate_xgb(x_tr, y_tr, x_vl, y_vl, prob_type, base_dir=base_dir)
+        validate_xgb(x_tr, y_tr, x_vl, y_vl, prob_type, tuner, notune, base_dir=base_dir)
 
 def get_test_results(dataset_name, model, exp_num, base_dir="results"):
     x_tr, y_tr, x_vl, y_vl, x_ts, y_ts = read_and_split_data(dataset_name)
@@ -53,19 +53,22 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", type=str, default="all", help = "Train one of Random Forests or XGB based predictors")
     parser.add_argument("--dataset", type=str, default="all", help = "Train model on either bank, maternal or winequality datasets")
+    parser.add_argument("--tuner", type=str, default="grid", help = "Tuning Style: grid does GridSearchCV and bayes does bayesian optimization for the same")
+
+    parser.add_argument('--notune', action='store_true')
     args = parser.parse_args()
 
     if args.model=='all' or args.dataset=='all':
         for dataset_name in ['bank', 'maternal', 'winequality']:
             for model in ["rf", "xgb"]:
                 print(f"Running experiment for {model} on {dataset_name}")
-                run_validation_exp(dataset_name, model)
+                run_validation_exp(dataset_name, model, args.tuner)
                 print('─' * 40)
     else:
         model = args.model
         dataset_name = args.dataset
         print(f"Running experiment for {model} on {dataset_name}")
-        run_validation_exp(dataset_name, model)
+        run_validation_exp(dataset_name, model, args.tuner, args.notune)
 
     end = datetime.now()
     print("Total time: ", end - start)
