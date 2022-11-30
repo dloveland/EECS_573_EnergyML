@@ -67,11 +67,12 @@ def main():
     else:
         model = args.model
         dataset_name = args.dataset
-        print(f"Running experiment for {model} on {dataset_name}")
+        if not args.notune:
+            print(f"Running experiment for {model} on {dataset_name}")
         run_validation_exp(dataset_name, model, args.tuner, args.notune)
 
     end = datetime.now()
-    print("Total time: ", end - start)
+    #print("Total time: ", end - start)
 
 if __name__ == "__main__":
     main()
