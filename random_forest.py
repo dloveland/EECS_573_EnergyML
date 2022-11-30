@@ -8,7 +8,7 @@ import sklearn
 from file_utils import *
 from sklearn.metrics import classification_report, confusion_matrix
 from joblib import dump, load
-from hyperparams import EXP_NAME, P_N_ESTIM, P_MAX_D, P_MAX_FEAT, P_LR
+from hyperparams import EXP_NAME, P_N_ESTIM, P_MAX_D, P_MAX_FEAT 
 
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.model_selection import GridSearchCV
@@ -23,24 +23,21 @@ def validate_rf(x_train, y_train, x_test, y_test, prob_type, tuner, notune, base
 def validate_rf_classifier(x_train, y_train, x_test, y_test, prob_type, tuner, notune, base_dir, filename="rf_results.csv"):
     exp_num = 0
     if notune:
-        #print("Performing training using appropriate params from hyperparam.txt")
-        params = {'criterion':'gini','max_features':P_MAX_FEAT, 'max_depth':P_MAX_D, 'n_estimators':P_N_ESTIM, 'class_weight':'balanced','random_state':573,'n_jobs':-1}
-        #print(f'Params are {params}')
-        #input("Confirm and press enter")
+        params = {'criterion':'gini','max_features':P_MAX_FEAT,'max_depth':P_MAX_D,'n_estimators':P_N_ESTIM,'class_weight':'balanced','random_state':573,'n_jobs':-1}
         rf_clf = RandomForestClassifier(**params)
         rf_clf.fit(x_train, y_train)
+        # In case we do inference experiments
         dump(rf_clf, base_dir+"/rf_clf/rf_" + str(EXP_NAME) + ".joblib")
         preds = rf_clf.predict(x_test)
+
         report = classification_report(y_test, preds, output_dict=True)
         confusion_mat = confusion_matrix(y_test, preds)
         np.savez(base_dir + "/rf_results/rf_" + str(EXP_NAME) + ".npz", confusion_mat)
         micro_avg_f1 = sklearn.metrics.f1_score(y_test, preds, average="micro")
         accuracy = sklearn.metrics.accuracy_score(y_test, preds)
+
         exp_results = [accuracy,report["macro avg"]["precision"],report["macro avg"]["recall"],report["macro avg"]["f1-score"],micro_avg_f1]
         exp_results = [str(x) for x in exp_results]
-        #print("Done with experiment " + str(EXP_NAME))
-        #for k,v in exp_results.items():
-        #    print(f"{k}:{v}")
         print(','.join([str(EXP_NAME),str(P_MAX_D),str(P_N_ESTIM),str(P_MAX_FEAT)]+exp_results))
     else:
         params = {
@@ -79,12 +76,14 @@ def validate_rf_classifier(x_train, y_train, x_test, y_test, prob_type, tuner, n
 
         rf_clf = hp_results.best_estimator_
         preds = rf_clf.predict(x_test)
+
         dump(rf_clf, base_dir+"/rf_clf/rf_best_" + refit_target + ".joblib")
         report = classification_report(y_test, preds, output_dict=True)
         confusion_mat = confusion_matrix(y_test, preds)
         np.savez(base_dir + "/rf_results/rf_best_" + refit_target  + ".npz", confusion_mat)
         micro_avg_f1 = sklearn.metrics.f1_score(y_test, preds, average="micro")
         accuracy = sklearn.metrics.accuracy_score(y_test, preds)
+
         exp_results = {"Accuracy":accuracy,
                 "Precision":report["macro avg"]["precision"],
                 "Recall":report["macro avg"]["recall"],
@@ -98,17 +97,18 @@ def validate_rf_classifier(x_train, y_train, x_test, y_test, prob_type, tuner, n
 
 def validate_rf_regressor(x_train, y_train, x_test, y_test, prob_type, tuner, notune, base_dir, filename="rf_results.csv"):
     if notune:
-        #print("Performing training using appropriate params from hyperparam.txt")
         params = {"criterion":"squared_error","max_features":P_MAX_FEAT, 'max_depth':P_MAX_D, 'n_estimators':P_N_ESTIM, 'random_state':573, 'n_jobs':-1}
-        #print(f'Params are {params}')
         rf_reg = RandomForestRegressor(**params)
         rf_reg.fit(x_train, y_train)
+        # In case we do inference tests
         dump(rf_reg, base_dir+"/rf_reg/rf_" + str(EXP_NAME) + ".joblib")
         preds = rf_reg.predict(x_test)
+
         mse = sklearn.metrics.mean_squared_error(y_test, preds)
         mae = sklearn.metrics.mean_absolute_error(y_test, preds)
+
         exp_results = [str(mse),str(mae)]
-        print(','.join([str(EXP_NAME),str(P_MAX_D),str(P_N_ESTIM),str(P_LR)]+exp_results))
+        print(','.join([str(EXP_NAME),str(P_MAX_D),str(P_N_ESTIM),str(P_MAX_FEAT)]+exp_results))
     else:
         params = {
             #'criterion':["squared_error", "absolute_error", "poisson"],
@@ -142,9 +142,11 @@ def validate_rf_regressor(x_train, y_train, x_test, y_test, prob_type, tuner, no
 
         rf_reg = hp_results.best_estimator_
         preds = rf_reg.predict(x_test)
+
         dump(rf_reg, base_dir+"/rf_reg/rf_best_"+refit_target+".joblib")
         mse = sklearn.metrics.mean_squared_error(y_test, preds)
         mae = sklearn.metrics.mean_absolute_error(y_test, preds)
+
         exp_results = {"MSE":mse, "MAE":mae}
         print("Testing results were:")
         for k,v in exp_results.items():

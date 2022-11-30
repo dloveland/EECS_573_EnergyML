@@ -9,7 +9,7 @@ from file_utils import *
 from preprocessing import read_and_split_data
 
 from random_forest import *
-from xgb import *
+from xgb import validate_xgb
 
 DS_NAME_TO_PROB_TYPE = {'bank': 'binary_classification', 'maternal':'multiclass_classification', 'winequality':'regression'}
 

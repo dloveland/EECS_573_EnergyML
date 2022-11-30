@@ -29,8 +29,10 @@ def validate_xgb_classifier(x_train, y_train, x_test, y_test, prob_type, tuner, 
         }
         xgb_clf = xgb.XGBClassifier(**params)
         xgb_clf.fit(x_train, y_train)
+        # If we do inference runs
         dump(xgb_clf, base_dir+"/xgb_clf/xgb_" + str(EXP_NAME) + ".joblib")
         preds = xgb_clf.predict(x_test)
+
         report = classification_report(y_test, preds, output_dict=True)
         confusion_mat = confusion_matrix(y_test, preds)
         np.savez(base_dir + "/xgb_results/xgb_" + str(EXP_NAME) + ".npz", confusion_mat)
@@ -81,6 +83,7 @@ def validate_xgb_classifier(x_train, y_train, x_test, y_test, prob_type, tuner, 
 
         xgb_clf = hp_results.best_estimator_
         preds = xgb_clf.predict(x_test)
+
         dump(xgb_clf, base_dir+"/xgb_results/xgb_best_" + refit_target + ".joblib")
         report = classification_report(y_test, preds, output_dict=True)
         confusion_mat = confusion_matrix(y_test, preds)
@@ -111,14 +114,14 @@ def validate_xgb_regressor(x_train, y_train, x_test, y_test, prob_type, tuner, n
         }
         xgb_clf = xgb.XGBRegressor(**params)
         xgb_clf.fit(x_train, y_train)
+        # If we do inference runs
         dump(xgb_clf, base_dir+"/xgb_reg/xgb_" + str(EXP_NAME) + ".joblib")
         preds = xgb_clf.predict(x_test)
+
         mse = sklearn.metrics.mean_squared_error(y_test, preds)
         mae = sklearn.metrics.mean_absolute_error(y_test, preds)
 
         exp_results = [str(mse),str(mae)]
-        #for k,v in exp_results.items():
-        #    print(f"{k}:{v}")
         print(','.join([str(EXP_NAME),str(P_MAX_D),str(P_N_ESTIM),str(P_LR)]+exp_results))
         return
     else:
@@ -158,6 +161,7 @@ def validate_xgb_regressor(x_train, y_train, x_test, y_test, prob_type, tuner, n
 
         mse = sklearn.metrics.mean_squared_error(y_test, preds)
         mae = sklearn.metrics.mean_absolute_error(y_test, preds)
+
         exp_results = {"MSE":mse, "MAE":mae}
         print("Testing results were:")
         for k,v in exp_results.items():
