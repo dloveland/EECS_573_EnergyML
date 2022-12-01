@@ -1,3 +1,1 @@
 model,exp_num,max_depth,criterion,n_estimators,mse,mae
-xgb,0,3,squared_error,50,0.4290799486662699,0.5302973447781045
-xgb,1,4,squared_error,50,0.4174666521771161,0.50035361114188

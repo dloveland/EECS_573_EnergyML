@@ -13,6 +13,9 @@ from hyperparams import EXP_NAME, P_N_ESTIM, P_MAX_D, P_MAX_FEAT
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.model_selection import GridSearchCV
 from skopt import BayesSearchCV
+from skopt.space import Real, Integer
+
+PROB_NAME = {v:k for k,v in {'bank': 'binary_classification', 'maternal':'multiclass_classification', 'winequality':'regression'}.items()}
 
 def validate_rf(x_train, y_train, x_test, y_test, prob_type, tuner, notune, base_dir, filename="rf_results.csv"):
     if prob_type == "regression":
@@ -27,7 +30,7 @@ def validate_rf_classifier(x_train, y_train, x_test, y_test, prob_type, tuner, n
         rf_clf = RandomForestClassifier(**params)
         rf_clf.fit(x_train, y_train)
         # In case we do inference experiments
-        dump(rf_clf, base_dir+"/rf_clf/rf_" + str(EXP_NAME) + ".joblib")
+        #dump(rf_clf, base_dir+"/rf_clf/rf_" + str(EXP_NAME) + ".joblib")
         preds = rf_clf.predict(x_test)
 
         report = classification_report(y_test, preds, output_dict=True)
@@ -38,32 +41,35 @@ def validate_rf_classifier(x_train, y_train, x_test, y_test, prob_type, tuner, n
 
         exp_results = [accuracy,report["macro avg"]["precision"],report["macro avg"]["recall"],report["macro avg"]["f1-score"],micro_avg_f1]
         exp_results = [str(x) for x in exp_results]
-        print(','.join([str(EXP_NAME),str(P_MAX_D),str(P_N_ESTIM),str(P_MAX_FEAT)]+exp_results))
+        print(','.join([str(EXP_NAME),str(P_MAX_D),str(P_N_ESTIM),str(P_MAX_FEAT)]+exp_results), file=open(f'percomb_runs/results_rf_{PROB_NAME[prob_type]}.csv','a'))
     else:
-        params = {
-            #'criterion':["gini", "entropy", "log_loss"],
-            'max_depth':[3, 4, 5],
-            'n_estimators':[50, 100, 150],
-            'max_features':[0.25,0.5,1],
-        }
-
         # Maybe change this to weighted or samples based f1
         scoring_options = ['accuracy','precision','recall','f1','f1_micro'] if 'binary' in prob_type else ['accuracy','precision_macro','recall_macro','f1_macro', 'f1_micro']
         refit_target = 'f1' if 'binary' in prob_type else 'f1_macro'
 
         hp_tuner = None
         if tuner == 'bayes':
-            print("Performing Bayesian Search")
+            params = {
+                'max_depth':Integer(3,5),
+                'n_estimators':Integer(50,150),
+                'max_features':Real(0.2,0.8),
+            }
             hp_tuner = BayesSearchCV(
                 RandomForestClassifier(criterion='gini',class_weight='balanced',random_state=573,n_jobs=-1),
                 search_spaces=params,
                 cv=5,
                 scoring=refit_target,
                 refit=refit_target,
+                n_iter=3*3*3,
                 random_state=573,
                 )
-        else:
-            print("Performing Grid Search")
+        elif tuner == 'grid':
+            params = {
+                'max_depth':[3, 4, 5],
+                'n_estimators':[50, 100, 150],
+                'max_features':[0.2,0.5,0.8],
+            }
+
             hp_tuner = GridSearchCV(
                 RandomForestClassifier(criterion='gini',class_weight='balanced',random_state=573,n_jobs=-1),
                 param_grid=params,
@@ -72,12 +78,11 @@ def validate_rf_classifier(x_train, y_train, x_test, y_test, prob_type, tuner, n
                 refit=refit_target,
                 )
         hp_results = hp_tuner.fit(x_train, y_train)
-        print(f"Best config found was {hp_results.best_params_} with the best {refit_target} of {hp_results.best_score_}.\n")
 
         rf_clf = hp_results.best_estimator_
         preds = rf_clf.predict(x_test)
 
-        dump(rf_clf, base_dir+"/rf_clf/rf_best_" + refit_target + ".joblib")
+        #dump(rf_clf, base_dir+"/rf_clf/rf_best_" + refit_target + ".joblib")
         report = classification_report(y_test, preds, output_dict=True)
         confusion_mat = confusion_matrix(y_test, preds)
         np.savez(base_dir + "/rf_results/rf_best_" + refit_target  + ".npz", confusion_mat)
@@ -89,11 +94,10 @@ def validate_rf_classifier(x_train, y_train, x_test, y_test, prob_type, tuner, n
                 "Recall":report["macro avg"]["recall"],
                 "F1":report["macro avg"]["f1-score"],
                 "Micro F1":micro_avg_f1}
-        print("Testing results were:")
-        for k,v in exp_results.items():
-            print(f"{k}:{v}")
+        to_print = [str(x) for x in [tuner]+list(hp_results.best_params_.values())+list(exp_results.values())+[refit_target]]
+        print(",".join(to_print), file=open(f"tuning_runs/results_rf_{PROB_NAME[prob_type]}.csv",'a'))
 
-        pd.DataFrame(hp_results.cv_results_).to_csv(base_dir+"/"+filename)
+        pd.DataFrame(hp_results.cv_results_).to_csv(f"tuning_runs/all_combs/rf_{PROB_NAME[prob_type]}_{tuner}.csv")
 
 def validate_rf_regressor(x_train, y_train, x_test, y_test, prob_type, tuner, notune, base_dir, filename="rf_results.csv"):
     if notune:
@@ -101,25 +105,23 @@ def validate_rf_regressor(x_train, y_train, x_test, y_test, prob_type, tuner, no
         rf_reg = RandomForestRegressor(**params)
         rf_reg.fit(x_train, y_train)
         # In case we do inference tests
-        dump(rf_reg, base_dir+"/rf_reg/rf_" + str(EXP_NAME) + ".joblib")
+        #dump(rf_reg, base_dir+"/rf_reg/rf_" + str(EXP_NAME) + ".joblib")
         preds = rf_reg.predict(x_test)
 
         mse = sklearn.metrics.mean_squared_error(y_test, preds)
         mae = sklearn.metrics.mean_absolute_error(y_test, preds)
 
         exp_results = [str(mse),str(mae)]
-        print(','.join([str(EXP_NAME),str(P_MAX_D),str(P_N_ESTIM),str(P_MAX_FEAT)]+exp_results))
+        print(','.join([str(EXP_NAME),str(P_MAX_D),str(P_N_ESTIM),str(P_MAX_FEAT)]+exp_results), file=open(f'percomb_runs/results_rf_{PROB_NAME[prob_type]}.csv','a'))
     else:
-        params = {
-            #'criterion':["squared_error", "absolute_error", "poisson"],
-            'max_depth':[3, 4, 5],
-            'n_estimators':[50, 100, 150],
-            'max_features':[0.25,0.5,1],
-        }
         refit_target = 'neg_mean_squared_error'
         hp_tuner = None
         if tuner == 'bayes':
-            print("Performing Bayesian Search")
+            params = {
+                'max_depth':Integer(3,5),
+                'n_estimators':Integer(50,150),
+                'max_features':Real(0.2,0.8),
+            }
             hp_tuner = BayesSearchCV(
                 RandomForestRegressor(criterion="squared_error",random_state=573,n_jobs=-1),
                 search_spaces=params,
@@ -128,28 +130,30 @@ def validate_rf_regressor(x_train, y_train, x_test, y_test, prob_type, tuner, no
                 refit=refit_target,
                 random_state=573,
                 )
-        else:
-            print("Performing Grid Search")
+        elif tuner == 'grid':
+            params = {
+                #'criterion':["squared_error", "absolute_error", "poisson"],
+                'max_depth':[3, 4, 5],
+                'n_estimators':[50, 100, 150],
+                'max_features':[0.2,0.5,0.8],
+            }
             hp_tuner = GridSearchCV(
-                RandomForestClassifier(criterion="squared_error",random_state=573,n_jobs=-1),
+                RandomForestRegressor(criterion="squared_error",random_state=573,n_jobs=-1),
                 param_grid=params,
                 cv=5,
-                scoring=scoring_options,
+                scoring=['neg_mean_squared_error','neg_mean_absolute_error'],
                 refit=refit_target,
                 )
         hp_results = hp_tuner.fit(x_train, y_train)
-        print(f"Best config found was {hp_results.best_params_} with the best {refit_target} of {hp_results.best_score_}.\n")
-
         rf_reg = hp_results.best_estimator_
         preds = rf_reg.predict(x_test)
 
-        dump(rf_reg, base_dir+"/rf_reg/rf_best_"+refit_target+".joblib")
+        #dump(rf_reg, base_dir+"/rf_reg/rf_best_"+refit_target+".joblib")
         mse = sklearn.metrics.mean_squared_error(y_test, preds)
         mae = sklearn.metrics.mean_absolute_error(y_test, preds)
 
         exp_results = {"MSE":mse, "MAE":mae}
-        print("Testing results were:")
-        for k,v in exp_results.items():
-            print(f"{k}:{v}")
+        to_print = [str(x) for x in [tuner]+list(hp_results.best_params_.values())+list(exp_results.values())+["MSE"]]
+        print(",".join(to_print), file=open(f"tuning_runs/results_rf_{PROB_NAME[prob_type]}.csv",'a'))
 
-        pd.DataFrame(hp_results.cv_results_).to_csv(base_dir+"/"+filename)
+        pd.DataFrame(hp_results.cv_results_).to_csv(f"tuning_runs/all_combs/rf_{PROB_NAME[prob_type]}_{tuner}.csv")
