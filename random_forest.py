@@ -1,19 +1,16 @@
-"""
-FIXME
-"""
-
 import numpy as np
 import pandas as pd
 import sklearn
 from file_utils import *
 from sklearn.metrics import classification_report, confusion_matrix
 from joblib import dump, load
-from hyperparams import EXP_NAME, P_N_ESTIM, P_MAX_D, P_MAX_FEAT 
+from hyperparams import EXP_NAME, P_N_ESTIM, P_MAX_D, P_MAX_FEAT, P_N_ITER
 
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
-from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import GridSearchCV, RandomizedSearchCV
 from skopt import BayesSearchCV
 from skopt.space import Real, Integer
+import scipy.stats.distributions as dists
 
 PROB_NAME = {v:k for k,v in {'bank': 'binary_classification', 'maternal':'multiclass_classification', 'winequality':'regression'}.items()}
 
@@ -60,7 +57,22 @@ def validate_rf_classifier(x_train, y_train, x_test, y_test, prob_type, tuner, n
                 cv=5,
                 scoring=refit_target,
                 refit=refit_target,
-                n_iter=3*3*3,
+                n_iter=P_N_ITER,
+                random_state=573,
+                )
+        if tuner == 'random':
+            params = {
+                'max_depth':dists.randint(3,5+1),
+                'n_estimators':dists.randint(50,150+1),
+                'max_features':dists.uniform(0.2,0.8),
+            }
+            hp_tuner = RandomizedSearchCV(
+                RandomForestClassifier(criterion='gini',class_weight='balanced',random_state=573,n_jobs=-1),
+                param_distributions=params,
+                cv=5,
+                scoring=refit_target,
+                refit=refit_target,
+                n_iter=P_N_ITER,
                 random_state=573,
                 )
         elif tuner == 'grid':
@@ -94,10 +106,10 @@ def validate_rf_classifier(x_train, y_train, x_test, y_test, prob_type, tuner, n
                 "Recall":report["macro avg"]["recall"],
                 "F1":report["macro avg"]["f1-score"],
                 "Micro F1":micro_avg_f1}
-        to_print = [str(x) for x in [tuner]+list(hp_results.best_params_.values())+list(exp_results.values())+[refit_target]]
-        print(",".join(to_print), file=open(f"tuning_runs/results_rf_{PROB_NAME[prob_type]}.csv",'a'))
+        to_print = [str(x) for x in [tuner, str(P_N_ITER)]+list(hp_results.best_params_.values())+list(exp_results.values())+[refit_target]]
+        print(",".join(to_print), file=open(f"bayes_runs/results_rf_{PROB_NAME[prob_type]}.csv",'a'))
 
-        pd.DataFrame(hp_results.cv_results_).to_csv(f"tuning_runs/all_combs/rf_{PROB_NAME[prob_type]}_{tuner}.csv")
+        pd.DataFrame(hp_results.cv_results_).to_csv(f"bayes_runs/all_combs/rf_{P_N_ITER}_{PROB_NAME[prob_type]}_{tuner}.csv")
 
 def validate_rf_regressor(x_train, y_train, x_test, y_test, prob_type, tuner, notune, base_dir, filename="rf_results.csv"):
     if notune:
@@ -129,6 +141,22 @@ def validate_rf_regressor(x_train, y_train, x_test, y_test, prob_type, tuner, no
                 scoring=refit_target,
                 refit=refit_target,
                 random_state=573,
+                n_iter=P_N_ITER,
+                )
+        if tuner == 'random':
+            params = {
+                'max_depth':dists.randint(3,5+1),
+                'n_estimators':dists.randint(50,150+1),
+                'max_features':dists.uniform(0.2,0.8),
+            }
+            hp_tuner = RandomizedSearchCV(
+                RandomForestRegressor(criterion="squared_error",random_state=573,n_jobs=-1),
+                param_distributions=params,
+                cv=5,
+                scoring=refit_target,
+                refit=refit_target,
+                random_state=573,
+                n_iter=P_N_ITER,
                 )
         elif tuner == 'grid':
             params = {
@@ -153,7 +181,7 @@ def validate_rf_regressor(x_train, y_train, x_test, y_test, prob_type, tuner, no
         mae = sklearn.metrics.mean_absolute_error(y_test, preds)
 
         exp_results = {"MSE":mse, "MAE":mae}
-        to_print = [str(x) for x in [tuner]+list(hp_results.best_params_.values())+list(exp_results.values())+["MSE"]]
-        print(",".join(to_print), file=open(f"tuning_runs/results_rf_{PROB_NAME[prob_type]}.csv",'a'))
+        to_print = [str(x) for x in [tuner,str(P_N_ITER)]+list(hp_results.best_params_.values())+list(exp_results.values())+["MSE"]]
+        print(",".join(to_print), file=open(f"bayes_runs/results_rf_{PROB_NAME[prob_type]}.csv",'a'))
 
-        pd.DataFrame(hp_results.cv_results_).to_csv(f"tuning_runs/all_combs/rf_{PROB_NAME[prob_type]}_{tuner}.csv")
+        pd.DataFrame(hp_results.cv_results_).to_csv(f"bayes_runs/all_combs/rf_{P_N_ITER}_{PROB_NAME[prob_type]}_{tuner}.csv")

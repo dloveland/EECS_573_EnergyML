@@ -5,11 +5,12 @@ from sklearn.metrics import classification_report, confusion_matrix
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 import xgboost as xgb
 
-from hyperparams import EXP_NAME, P_N_ESTIM, P_MAX_D, P_LR, P_COL_BT
-from sklearn.model_selection import GridSearchCV
+from hyperparams import EXP_NAME, P_N_ESTIM, P_MAX_D, P_LR, P_COL_BT, P_N_ITER
+from sklearn.model_selection import GridSearchCV, RandomizedSearchCV
 from skopt import BayesSearchCV
 from skopt.space import Real, Integer
 from file_utils import *
+import scipy.stats.distributions as dists
 
 PROB_NAME = {v:k for k,v in {'bank': 'binary_classification', 'maternal':'multiclass_classification', 'winequality':'regression'}.items()}
 
@@ -68,12 +69,27 @@ def validate_xgb_classifier(x_train, y_train, x_test, y_test, prob_type, tuner, 
                    xgb.XGBClassifier(objective=obj,eval_metric='logloss',seed=573),
                    search_spaces=params,
                    cv=5,
-                   n_iter=3*3*3,
+                   n_iter=P_N_ITER,
                    scoring=refit_target,
                    refit=refit_target,
                    random_state=573,
             )
-        else:
+        if tuner == 'random':
+            params = {
+                'max_depth':dists.randint(3,5+1),
+                'n_estimators':dists.randint(50,150+1),
+                'colsample_bytree':dists.uniform(0.2,0.8),
+            }
+            hp_tuner = RandomizedSearchCV(
+                   xgb.XGBClassifier(objective=obj,eval_metric='logloss',seed=573),
+                   param_distributions=params,
+                   cv=5,
+                   n_iter=P_N_ITER,
+                   scoring=refit_target,
+                   refit=refit_target,
+                   random_state=573,
+            )
+        elif tuner == 'grid':
             params = {
                 'max_depth':[3, 4, 5],
                 'n_estimators':[50, 100, 150],
@@ -105,10 +121,10 @@ def validate_xgb_classifier(x_train, y_train, x_test, y_test, prob_type, tuner, 
                 "F1":report["macro avg"]["f1-score"],
                 "Micro F1":micro_avg_f1,
                 }
-        to_print = [str(x) for x in [tuner]+list(hp_results.best_params_.values())+list(exp_results.values())+[refit_target]]
-        print(",".join(to_print), file=open(f"tuning_runs/results_xgb_{PROB_NAME[prob_type]}.csv","a"))
+        to_print = [str(x) for x in [tuner,str(P_N_ITER)]+list(hp_results.best_params_.values())+list(exp_results.values())+[refit_target]]
+        print(",".join(to_print), file=open(f"bayes_runs/results_xgb_{PROB_NAME[prob_type]}.csv","a"))
 
-        pd.DataFrame(hp_results.cv_results_).to_csv(f"tuning_runs/all_combs/xgb_{PROB_NAME[prob_type]}_{tuner}.csv")
+        pd.DataFrame(hp_results.cv_results_).to_csv(f"bayes_runs/all_combs/xgb_{P_N_ITER}_{PROB_NAME[prob_type]}_{tuner}.csv")
 
 def validate_xgb_regressor(x_train, y_train, x_test, y_test, prob_type, tuner, notune,base_dir, filename="xgb_results.csv"):
     y_test = np.array(y_test, dtype="int64")
@@ -135,7 +151,7 @@ def validate_xgb_regressor(x_train, y_train, x_test, y_test, prob_type, tuner, n
         refit_target = 'neg_mean_squared_error'
         if tuner == 'bayes':
             params = {
-                'max_depth':Integer(3,7),
+                'max_depth':Integer(3,5),
                 'n_estimators':Integer(50,150),
                 'colsample_bytree':Real(0.2,0.8),
             }
@@ -144,12 +160,28 @@ def validate_xgb_regressor(x_train, y_train, x_test, y_test, prob_type, tuner, n
                    xgb.XGBRegressor(seed=573),
                    search_spaces=params,
                    cv=5,
-                   n_iter=3*3*3,
+                   n_iter=P_N_ITER,
                    scoring=refit_target,
                    refit=refit_target,
                    random_state=573, 
                    )
-        else:
+        if tuner == 'random':
+            params = {
+                'max_depth':dists.randint(3,5+1),
+                'n_estimators':dists.randint(50,150+1),
+                'colsample_bytree':dists.uniform(0.2,0.8),
+            }
+
+            hp_tuner = RandomizedSearchCV(
+                   xgb.XGBRegressor(seed=573),
+                   param_distributions=params,
+                   cv=5,
+                   n_iter=P_N_ITER,
+                   scoring=refit_target,
+                   refit=refit_target,
+                   random_state=573, 
+                   )
+        elif tuner == "grid":
             params = {
                 'max_depth':[3, 4, 5],
                 'n_estimators':[50, 100, 150],
@@ -164,17 +196,14 @@ def validate_xgb_regressor(x_train, y_train, x_test, y_test, prob_type, tuner, n
                    )
         hp_results = hp_tuner.fit(x_train, y_train)
 
-        #print(f"Best config found was {hp_results.best_params_} with the best {refit_target} of {hp_results.best_score_}.\n")
-
         xgb_reg = hp_results.best_estimator_
         preds = xgb_reg.predict(x_test)
-        #dump(xgb_reg, base_dir+"/xgb_reg/xgb_best_"+refit_target+".joblib")
 
         mse = sklearn.metrics.mean_squared_error(y_test, preds)
         mae = sklearn.metrics.mean_absolute_error(y_test, preds)
 
         exp_results = {"MSE":mse, "MAE":mae}
-        to_print = [str(x) for x in [tuner]+list(hp_results.best_params_.values())+list(exp_results.values())+["MSE"]]
-        print(",".join(to_print), file=open(f"tuning_runs/results_xgb_{PROB_NAME[prob_type]}.csv","a"))
+        to_print = [str(x) for x in [tuner,str(P_N_ITER)]+list(hp_results.best_params_.values())+list(exp_results.values())+["MSE"]]
+        print(",".join(to_print), file=open(f"bayes_runs/results_xgb_{PROB_NAME[prob_type]}.csv","a"))
 
-        pd.DataFrame(hp_results.cv_results_).to_csv(f"tuning_runs/all_combs/xgb_{PROB_NAME[prob_type]}_{tuner}.csv")
+        pd.DataFrame(hp_results.cv_results_).to_csv(f"bayes_runs/all_combs/xgb_{P_N_ITER}_{PROB_NAME[prob_type]}_{tuner}.csv")

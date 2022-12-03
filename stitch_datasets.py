@@ -2,7 +2,7 @@ import pandas as pd
 import argparse
 
 def main(dirname):
-    if dirname == "percomb_runs" or dirname == "tuning_runs":
+    if dirname == "percomb_runs" or dirname == "tuning_runs" or dirname == "bayes_runs":
         for model in ["rf","xgb"]:
             for dataset in ["bank","maternal","winequality"]:
                     pd_result = pd.read_csv(f"{dirname}/results_{model}_{dataset}.csv")
