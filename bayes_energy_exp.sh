@@ -25,30 +25,32 @@ for model in "rf" "xgb"; do
 		echo "P_COL_BT=None" >> hyperparams.py
 
 		printf "Starting $dataset\n"
-		for n_iter in {4..27}; do
-			# Just to fix import issues, ignore
-			echo "P_N_ITER=$n_iter" >> hyperparams.py
-			sleep 1
-			for tuner in "random" "bayes"; do
-				printf "Starting $n_iter $tuner\n"
-				sudo perf stat -e "power/energy-pkg/" -x ',' python3 -W ignore run_ml_model.py --model $model --data $dataset --tuner $tuner  &>> bayes_runs/energy_$model\_$dataset.csv
-
-				# Uncomment to do a run to test things
-				#python3 run_ml_model.py --model $model --data $dataset --tuner $tuner 
+			for n_iter in {1..27}; do
+				# Just to fix import issues, ignore
+				echo "P_N_ITER=$n_iter" >> hyperparams.py
+				sleep 1
+				for tuner in "random" "bayes"; do
+					for retry in {1..5}; do
+						printf "Starting $n_iter $tuner\n"
+						sudo perf stat -e "power/energy-pkg/" -x ',' python3 -W ignore run_ml_model.py --model $model --data $dataset --tuner $tuner  &>> bayes_runs/energy_$model\_$dataset.csv
+						sleep 1
+					done
+					# Uncomment to do a run to test things
+					#python3 run_ml_model.py --model $model --data $dataset --tuner $tuner 
+				done
+				if [[ $n_iter == 27 ]]; then
+					sudo perf stat -e "power/energy-pkg/" -x ',' python3 -W ignore run_ml_model.py --model $model --data $dataset --tuner grid  &>> bayes_runs/energy_$model\_$dataset.csv
+				fi
 			done
-			if [[ $n_iter == 27 ]]; then
-				sudo perf stat -e "power/energy-pkg/" -x ',' python3 -W ignore run_ml_model.py --model $model --data $dataset --tuner grid  &>> bayes_runs/energy_$model\_$dataset.csv
-			fi
-		done
 	done
 done
 printf "Done with $tuner\n"
 printf "_________________________________\n"
 
-rm bayes_runs/combined_results_*.csv
+#rm bayes_runs/combined_results_*.csv
 python3 stitch_datasets.py --dirname "bayes_runs"
 #rm bayes_runs/energy_*.csv
-$rm bayes_runs/results_*.csv
+#rm bayes_runs/results_*.csv
 
 mkdir -p all_combs/rf
 mkdir -p all_combs/xgb

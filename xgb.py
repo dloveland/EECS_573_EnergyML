@@ -72,7 +72,6 @@ def validate_xgb_classifier(x_train, y_train, x_test, y_test, prob_type, tuner, 
                    n_iter=P_N_ITER,
                    scoring=refit_target,
                    refit=refit_target,
-                   random_state=573,
             )
         if tuner == 'random':
             params = {
@@ -87,7 +86,6 @@ def validate_xgb_classifier(x_train, y_train, x_test, y_test, prob_type, tuner, 
                    n_iter=P_N_ITER,
                    scoring=refit_target,
                    refit=refit_target,
-                   random_state=573,
             )
         elif tuner == 'grid':
             params = {
@@ -163,7 +161,6 @@ def validate_xgb_regressor(x_train, y_train, x_test, y_test, prob_type, tuner, n
                    n_iter=P_N_ITER,
                    scoring=refit_target,
                    refit=refit_target,
-                   random_state=573, 
                    )
         if tuner == 'random':
             params = {
@@ -179,7 +176,6 @@ def validate_xgb_regressor(x_train, y_train, x_test, y_test, prob_type, tuner, n
                    n_iter=P_N_ITER,
                    scoring=refit_target,
                    refit=refit_target,
-                   random_state=573, 
                    )
         elif tuner == "grid":
             params = {

@@ -58,7 +58,6 @@ def validate_rf_classifier(x_train, y_train, x_test, y_test, prob_type, tuner, n
                 scoring=refit_target,
                 refit=refit_target,
                 n_iter=P_N_ITER,
-                random_state=573,
                 )
         if tuner == 'random':
             params = {
@@ -73,7 +72,6 @@ def validate_rf_classifier(x_train, y_train, x_test, y_test, prob_type, tuner, n
                 scoring=refit_target,
                 refit=refit_target,
                 n_iter=P_N_ITER,
-                random_state=573,
                 )
         elif tuner == 'grid':
             params = {
@@ -140,7 +138,6 @@ def validate_rf_regressor(x_train, y_train, x_test, y_test, prob_type, tuner, no
                 cv=5,
                 scoring=refit_target,
                 refit=refit_target,
-                random_state=573,
                 n_iter=P_N_ITER,
                 )
         if tuner == 'random':
@@ -155,7 +152,6 @@ def validate_rf_regressor(x_train, y_train, x_test, y_test, prob_type, tuner, no
                 cv=5,
                 scoring=refit_target,
                 refit=refit_target,
-                random_state=573,
                 n_iter=P_N_ITER,
                 )
         elif tuner == 'grid':
